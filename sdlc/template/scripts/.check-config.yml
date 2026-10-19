@@ -1,0 +1,45 @@
+# Static analysis check commands per source repo.
+# Format:  <repo-name>: <shell command to run from inside _source/<repo>/>
+#
+# This file is created by /onboard and can be edited manually.
+# If a repo is not listed here, TypeScript (tsc --noEmit) is the default.
+#
+# Examples by stack:
+#
+# TypeScript / Node.js / Next.js:
+#   my-backend:    npx --no-install tsc --noEmit -p tsconfig.json
+#   my-frontend:   npx --no-install tsc --noEmit
+#   my-nextjs-app: npx --no-install tsc --noEmit    (Next.js fullstack — single repo covers both BE and FE check)
+#
+# Python:
+#   my-api:        python -m mypy src/ --ignore-missing-imports
+#   my-django:     python -m mypy . --ignore-missing-imports
+#
+# PHP:
+#   my-laravel:    vendor/bin/phpstan analyse --no-progress
+#   my-php:        vendor/bin/phpcs --standard=PSR12 src/
+#
+# Go:
+#   my-service:    go vet ./...
+#   my-go:         golangci-lint run
+#
+# Java / Kotlin:
+#   my-spring:     ./mvnw compile -q
+#   my-android:    ./gradlew lint
+#
+# Flutter / Dart:
+#   my-flutter:    flutter analyze
+#
+# React Native:
+#   my-rn:         npx --no-install tsc --noEmit
+#
+# Swift / iOS (requires Xcode CLI tools):
+#   my-ios:        xcodebuild analyze -scheme MyApp -quiet
+#
+# Ruby on Rails:
+#   my-rails:      bundle exec rubocop --no-color --format quiet
+
+# --- Project repos (set by /onboard) ---
+# [BE_REPO]:     <command>
+# [FE_REPO]:     <command>
+# [MOBILE_REPO]: <command>

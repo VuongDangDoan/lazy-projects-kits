@@ -1,0 +1,36 @@
+# Bộ content — viết nội dung: brief (G1) → bản nháp → biên tập (G2).
+# Lazy Bot factory chép thư mục template/ vào repo dự án mới và bản này thành .lazy/kit.yaml
+# (quy trình của dự án — sửa bằng PR trong repo dự án).
+name: content
+version: 0.1.0
+description: Viết nội dung — chốt brief (G1), viết bản nháp theo dàn ý, tự biên tập ra bản cuối (G2)
+use_when: >-
+  Đầu ra là chữ để người đọc: bài blog, bài giới thiệu sản phẩm, tài liệu hướng dẫn, kịch bản, email,
+  bài mạng xã hội, bản tin. Không dùng khi cần viết code chạy được (bộ sdlc) hoặc khi việc chính là tìm
+  hiểu, so sánh để ra quyết định (bộ research).
+init: scripts/lazy-init.sh
+test_command: scripts/lazy-gate.sh check
+stages:
+  - id: brief
+    goal: Chốt độc giả, mục tiêu, giọng văn, thông điệp chính, dàn ý, độ dài — dừng ở G1
+    command: /brief {request}
+    gate:
+      script: scripts/lazy-gate.sh brief
+      human: G1
+      timeout_s: 120
+      max_retries: 2
+  - id: draft
+    goal: Viết bản nháp đủ dàn ý đã duyệt, đúng độ dài
+    command: "/draft theo brief đã duyệt. Yêu cầu gốc: {request}"
+    gate:
+      script: scripts/lazy-gate.sh draft
+      timeout_s: 120
+      max_retries: 2
+  - id: edit
+    goal: Biên tập ra bản cuối + checklist biên tập — dừng ở G2
+    command: "/edit bản nháp theo brief. Yêu cầu gốc: {request}"
+    gate:
+      script: scripts/lazy-gate.sh edit
+      human: G2
+      timeout_s: 120
+      max_retries: 2

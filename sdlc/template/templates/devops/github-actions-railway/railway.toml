@@ -1,0 +1,13 @@
+# railway.toml — build + start + healthcheck config for {{BE_REPO}}
+[build]
+builder = "NIXPACKS"
+buildCommand = "{{SETUP_CMD}} && {{BUILD_CMD}}"
+
+[deploy]
+startCommand = "{{MIGRATE_CMD}} && {{START_CMD}}"
+# {{HEALTHCHECK_PATH}} must be an existing route that returns 200 — create it
+# (or point healthcheckPath at an existing route) BEFORE the first deploy.
+healthcheckPath = "{{HEALTHCHECK_PATH}}"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

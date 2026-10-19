@@ -1,0 +1,36 @@
+# Bộ research — nghiên cứu, so sánh, khảo sát → báo cáo có nguồn. Chủ duyệt phạm vi (G1) và báo cáo (G2).
+# Lazy Bot factory chép thư mục template/ vào repo dự án mới và bản này thành .lazy/kit.yaml
+# (quy trình của dự án — sửa bằng PR trong repo dự án).
+name: research
+version: 0.1.0
+description: Nghiên cứu → báo cáo có nguồn — chốt phạm vi (G1), thu thập nguồn, viết báo cáo có khuyến nghị (G2)
+use_when: >-
+  Việc cần tìm hiểu, so sánh, đánh giá hoặc khảo sát (công nghệ, nhà cung cấp, sản phẩm, thị trường, đối thủ,
+  phương án) và đầu ra là báo cáo có nguồn + khuyến nghị để chủ ra quyết định. Không dùng khi cần viết code
+  chạy được (bộ sdlc) hoặc khi đầu ra là bài viết / tài liệu để đăng (bộ content).
+init: scripts/lazy-init.sh
+test_command: scripts/lazy-gate.sh check
+stages:
+  - id: scope
+    goal: Chốt câu hỏi nghiên cứu, phạm vi, tiêu chí đánh giá, nguồn dự kiến — dừng ở G1
+    command: /scope {request}
+    gate:
+      script: scripts/lazy-gate.sh scope
+      human: G1
+      timeout_s: 120
+      max_retries: 2
+  - id: research
+    goal: Thu thập nguồn theo tiêu chí đã duyệt, mỗi nguồn có link + ý chính
+    command: "/research theo brief đã duyệt. Yêu cầu gốc: {request}"
+    gate:
+      script: scripts/lazy-gate.sh research
+      timeout_s: 120
+      max_retries: 2
+  - id: report
+    goal: Báo cáo — tóm tắt, phân tích theo tiêu chí, khuyến nghị, hạn chế, trích nguồn — dừng ở G2
+    command: "/report theo brief và nguồn đã thu thập. Yêu cầu gốc: {request}"
+    gate:
+      script: scripts/lazy-gate.sh report
+      human: G2
+      timeout_s: 120
+      max_retries: 2

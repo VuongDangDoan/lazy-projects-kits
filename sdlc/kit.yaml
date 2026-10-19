@@ -1,0 +1,45 @@
+# Bộ sdlc — quy trình phát triển phần mềm BA → SA → Planner → Build, chủ duyệt G1–G4.
+# Lazy Bot factory chép thư mục template/ vào repo dự án mới và bản này thành .lazy/kit.yaml
+# (quy trình của dự án — sửa bằng PR trong repo dự án).
+name: sdlc
+version: 0.3.2
+description: Quy trình phát triển phần mềm BA → SA → Planner → Build, chủ duyệt từng gate G1–G4
+use_when: >-
+  Đầu ra là phần mềm chạy được: app web / mobile, API, backend, công cụ, tính năng mới cho sản phẩm có code.
+  Cần phân tích yêu cầu, thiết kế, chia ticket rồi viết code + test. Không dùng khi việc chỉ là nghiên cứu /
+  so sánh (bộ research) hoặc viết bài, tài liệu (bộ content).
+init: scripts/lazy-init.sh
+test_command: scripts/lazy-gate.sh build
+stages:
+  - id: ba
+    goal: Phân tích yêu cầu — SRS theo module + user story (Phase 1), dừng ở G1
+    command: /ba {request}
+    gate:
+      script: scripts/lazy-gate.sh ba
+      human: G1
+      timeout_s: 300
+      max_retries: 2
+  - id: sa
+    goal: Thiết kế — API contract, entity design, ADR (Phase 2), dừng ở G2
+    command: "/sa mọi user story mới của giai đoạn BA. Yêu cầu gốc: {request}"
+    gate:
+      script: scripts/lazy-gate.sh sa
+      human: G2
+      timeout_s: 300
+      max_retries: 2
+  - id: planner
+    goal: Lập kế hoạch — ticket + kanban (Phase 3), dừng ở G3
+    command: "/planner mọi user story đã thiết kế. Yêu cầu gốc: {request}"
+    gate:
+      script: scripts/lazy-gate.sh planner
+      human: G3
+      timeout_s: 300
+      max_retries: 2
+  - id: build
+    goal: Làm lần lượt mọi ticket (implement → self-review → self-QC), dừng ở G4
+    command: /factory-build {request}
+    gate:
+      script: scripts/lazy-gate.sh build
+      human: G4
+      timeout_s: 1200
+      max_retries: 2

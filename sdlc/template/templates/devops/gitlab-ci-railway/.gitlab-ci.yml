@@ -1,0 +1,51 @@
+# .gitlab-ci.yml — check stage gates every deploy stage (quality gate is opt-OUT)
+stages:
+  - check
+  - deploy
+
+variables:
+  NODE_VERSION: "{{NODE_VERSION}}"
+
+check:
+  stage: check
+  image: node:${NODE_VERSION}
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+  script:
+    - {{INSTALL_CMD}}
+    - {{SETUP_CMD}}
+    - {{CHECK_CMD}}
+    - {{LINT_CMD}}
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "{{PROD_BRANCH}}"'
+    - if: '$CI_COMMIT_BRANCH == "{{STAGING_BRANCH}}"'
+
+# deploy stage jobs run only after the check stage passes (GitLab stage ordering).
+deploy-production:
+  stage: deploy
+  image: node:${NODE_VERSION}
+  script:
+    - npm install -g @railway/cli
+    - railway up --service $RAILWAY_SERVICE_ID_PROD --detach
+  environment:
+    name: production
+    url: $PRODUCTION_URL
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "{{PROD_BRANCH}}"'
+  when: on_success
+
+deploy-staging:
+  stage: deploy
+  image: node:${NODE_VERSION}
+  script:
+    - npm install -g @railway/cli
+    - railway up --service $RAILWAY_SERVICE_ID_STAGING --detach
+  environment:
+    name: staging
+    url: $STAGING_URL
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "{{STAGING_BRANCH}}"'
+  when: on_success

@@ -1,0 +1,23 @@
+# .github/workflows/ci.yml — runs on every PR and push (no deploy)
+name: CI
+
+on:
+  push:
+    branches: [{{PROD_BRANCH}}, {{STAGING_BRANCH}}]
+  pull_request:
+    branches: [{{PROD_BRANCH}}, {{STAGING_BRANCH}}]
+
+jobs:
+  check:
+    name: Type Check & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: {{NODE_VERSION}}
+          cache: npm
+      - run: {{INSTALL_CMD}}
+      - run: {{SETUP_CMD}}
+      - run: {{CHECK_CMD}}
+      - run: {{LINT_CMD}}

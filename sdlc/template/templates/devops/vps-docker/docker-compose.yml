@@ -1,0 +1,14 @@
+# docker-compose.yml — lives at the deploy path on the VPS.
+# Env values come from a .env file NEXT TO this compose file on the server — never from git.
+services:
+  app:
+    image: ghcr.io/{{GH_ORG}}/{{BE_REPO}}:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NODE_ENV=production
+    command: sh -c "{{MIGRATE_CMD}} && node server.js"

@@ -1,0 +1,52 @@
+# ==============================================
+# SOURCE CODE — Lazy Bot factory mode keeps the code IN this repo under _source/<name>/
+# (no symlinks). Outside factory mode, add `_source/` here if you symlink sibling repos.
+# ==============================================
+
+# ==============================================
+# SESSION FILES — local only, never committed
+# ==============================================
+# active-context.md is tracked in factory mode (every task starts from a fresh worktree)
+knowledge/L3-session/history/
+
+# ==============================================
+# CODEX BRIEFS — generated per ticket
+# Commit these if you want brief history tracked
+# Ignore them if you prefer clean diffs
+# ==============================================
+# .codex/briefs/
+
+# ==============================================
+# TEST RESULTS — generated locally
+# ==============================================
+tests/results/
+tests/e2e/results/
+
+# ==============================================
+# E2E SECRETS — never commit credentials
+# ==============================================
+tests/e2e/fixtures/test-users.json
+tests/e2e/fixtures/auth-state.json
+
+# ==============================================
+# OS FILES
+# ==============================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==============================================
+# EDITOR FILES
+# ==============================================
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ==============================================
+# LOGS
+# ==============================================
+*.log
+npm-debug.log*
+# Playwright MCP artifacts (screenshots/snapshots may contain private chats or tokens)
+.playwright-mcp/

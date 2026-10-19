@@ -1,0 +1,36 @@
+# .github/workflows/deploy-prod.yml — deploys to Railway production on push to {{PROD_BRANCH}}
+name: Deploy — Production
+
+on:
+  push:
+    branches: [{{PROD_BRANCH}}]
+
+jobs:
+  check:
+    name: Type Check & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: {{NODE_VERSION}}
+          cache: npm
+      - run: {{INSTALL_CMD}}
+      - run: {{SETUP_CMD}}
+      - run: {{CHECK_CMD}}
+      - run: {{LINT_CMD}}
+
+  deploy:
+    name: Deploy to Railway (Production)
+    runs-on: ubuntu-latest
+    # Quality gate — deploy only runs after check passes.
+    # Removing this "needs" line is a deliberate opt-out; the default is gated.
+    needs: [check]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service ${{ secrets.RAILWAY_SERVICE_ID_PROD }} --detach

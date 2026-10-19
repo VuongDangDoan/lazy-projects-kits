@@ -1,0 +1,9 @@
+# Nhiều factory Lazy Bot (mỗi máy một factory) cùng làm repo này, đồng bộ qua git: trước mỗi giai
+# đoạn factory gộp main mới nhất vào nhánh task. File chỉ mục gộp kiểu union (giữ dòng của cả hai
+# nhánh); trạng thái phiên giữ bản của nhánh đang làm (merge=ours — factory định nghĩa driver này;
+# nơi khác không có driver thì git gộp như thường).
+docs/user-stories/_index.md merge=union
+tasks/kanban.md merge=union
+architecture/feature-map.md merge=union
+knowledge/L1-domain/module-integration-map.md merge=union
+knowledge/L3-session/active-context.md merge=ours

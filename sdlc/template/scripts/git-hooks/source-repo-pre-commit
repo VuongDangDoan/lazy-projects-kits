@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# source-repo-pre-commit — thin wrapper installed in the source repos.
+# Defers all logic to the workspace's check-secrets.sh so updates flow
+# through one place.
+#
+# Installed by: <workspace>/scripts/install-hooks.sh --include-source
+# Update by:    re-run install-hooks.sh --include-source from the workspace.
+
+set -uo pipefail
+
+# Locate the workspace. Priority:
+#   1. SDLC_WORKSPACE env var
+#   2. Any sibling directory that contains scripts/check-secrets.sh
+SOURCE_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+WORKSPACE="${SDLC_WORKSPACE:-}"
+
+if [[ -z "$WORKSPACE" ]]; then
+    for candidate in "$SOURCE_ROOT"/../*/scripts/check-secrets.sh; do
+        if [[ -x "$candidate" ]]; then
+            WORKSPACE="$(cd "$(dirname "$candidate")/.." && pwd)"
+            break
+        fi
+    done
+fi
+
+SECRETS="${WORKSPACE}/scripts/check-secrets.sh"
+
+if [[ -z "$WORKSPACE" || ! -x "$SECRETS" ]]; then
+    echo "warn: workspace check-secrets.sh not found (searched siblings of $SOURCE_ROOT)" >&2
+    echo "      pre-commit secret scan SKIPPED — set SDLC_WORKSPACE env var to the workspace path" >&2
+    exit 0
+fi
+
+# Collect staged files from THIS source repo (NOT the workspace).
+STAGED=()
+while IFS= read -r line; do
+    [[ -n "$line" ]] && STAGED+=("${SOURCE_ROOT}/${line}")
+done < <(git diff --cached --name-only --diff-filter=ACM)
+
+if (( ${#STAGED[@]} == 0 )); then
+    exit 0
+fi
+
+"$SECRETS" "${STAGED[@]}"

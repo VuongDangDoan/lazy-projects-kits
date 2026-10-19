@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+# pre-commit — workspace quality gate.
+# Runs validators on staged ticket / US / feature-map files and warns on freshness drift.
+#
+# Install via: scripts/install-hooks.sh
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Collect staged (added/copied/modified) files — portable to bash 3.2 (macOS default)
+STAGED=()
+while IFS= read -r line; do
+    [[ -n "$line" ]] && STAGED+=("$line")
+done < <(git diff --cached --name-only --diff-filter=ACM)
+
+if (( ${#STAGED[@]} == 0 )); then
+    exit 0
+fi
+
+FAIL=0
+
+# --- Secret scanner runs FIRST — blocks commit on potential leak ---
+echo ""
+echo "── secret scan (${#STAGED[@]} staged) ──"
+if scripts/check-secrets.sh "${STAGED[@]}"; then
+    : # passed; output already printed
+else
+    FAIL=1
+fi
+
+
+run() {
+    local label="$1"; shift
+    echo ""
+    echo "── $label ──"
+    if "$@"; then
+        echo "  ✓ pass"
+    else
+        echo "  ✗ fail"
+        FAIL=1
+    fi
+}
+
+# --- Validate staged tickets ---
+TICKETS=()
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        tasks/tickets/TICKET-*.md) TICKETS+=("$f") ;;
+    esac
+done
+if (( ${#TICKETS[@]} > 0 )); then
+    run "validate-ticket (${#TICKETS[@]} staged)" scripts/validate-ticket.py "${TICKETS[@]}"
+fi
+
+# --- Validate staged user stories ---
+US_FILES=()
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        docs/user-stories/US-*.md) US_FILES+=("$f") ;;
+    esac
+done
+if (( ${#US_FILES[@]} > 0 )); then
+    run "validate-us (${#US_FILES[@]} staged)" scripts/validate-us.py "${US_FILES[@]}"
+fi
+
+# --- Validate staged feature-map files ---
+FM_FILES=()
+FULL_FILES_STAGED=()  # the .md (not .summary.md) files
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        architecture/feature-map.md) FM_FILES+=("$f") ;;
+        architecture/feature-map/*.summary.md) FM_FILES+=("$f") ;;
+        architecture/feature-map/*.md)
+            FM_FILES+=("$f")
+            FULL_FILES_STAGED+=("$f")
+            ;;
+    esac
+done
+if (( ${#FM_FILES[@]} > 0 )); then
+    run "validate-feature-map (${#FM_FILES[@]} staged)" scripts/validate-feature-map.py "${FM_FILES[@]}"
+fi
+
+# --- If a full per-module file is staged, regenerate its summary and stage it too ---
+if (( ${#FULL_FILES_STAGED[@]} > 0 )); then
+    echo ""
+    echo "── auto-regenerate feature-map summaries for staged module files ──"
+    for f in "${FULL_FILES_STAGED[@]}"; do
+        # Extract module name from path: architecture/feature-map/<module>.md
+        module=$(basename "$f" .md)
+        if scripts/feature-map-summary.py "$module"; then
+            git add "architecture/feature-map/${module}.summary.md"
+            echo "  ℹ added architecture/feature-map/${module}.summary.md to commit"
+        else
+            echo "  ✗ summary generation failed for $module"
+            FAIL=1
+        fi
+    done
+fi
+
+# --- Validate staged domain files ---
+DOMAIN_FILES_STAGED=()
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        knowledge/L1-domain/*-domain.summary.md) ;;  # skip summaries themselves
+        knowledge/L1-domain/*-domain.md) DOMAIN_FILES_STAGED+=("$f") ;;
+    esac
+done
+if (( ${#DOMAIN_FILES_STAGED[@]} > 0 )); then
+    run "validate-domain (${#DOMAIN_FILES_STAGED[@]} staged)" scripts/validate-domain.py "${DOMAIN_FILES_STAGED[@]}"
+fi
+
+# --- Validate staged legacy scan files ---
+SCAN_FILES_STAGED=()
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        knowledge/L2-legacy/scans/*-legacy-scan.md) SCAN_FILES_STAGED+=("$f") ;;
+    esac
+done
+if (( ${#SCAN_FILES_STAGED[@]} > 0 )); then
+    run "validate-legacy-scan (${#SCAN_FILES_STAGED[@]} staged)" scripts/validate-legacy-scan.py "${SCAN_FILES_STAGED[@]}"
+fi
+
+# --- Validate staged API contract YAML files ---
+CONTRACT_FILES_STAGED=()
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        architecture/api-contracts/v1/*.yaml) CONTRACT_FILES_STAGED+=("$f") ;;
+    esac
+done
+if (( ${#CONTRACT_FILES_STAGED[@]} > 0 )); then
+    run "validate-api-contract (${#CONTRACT_FILES_STAGED[@]} staged)" scripts/validate-api-contract.py "${CONTRACT_FILES_STAGED[@]}"
+fi
+
+# --- Validate staged test case files ---
+TEST_FILES_STAGED=()
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        tests/cases/*/TICKET-*-tests.md) TEST_FILES_STAGED+=("$f") ;;
+    esac
+done
+if (( ${#TEST_FILES_STAGED[@]} > 0 )); then
+    run "validate-test-case (${#TEST_FILES_STAGED[@]} staged)" scripts/validate-test-case.py "${TEST_FILES_STAGED[@]}"
+fi
+
+# --- Validate staged e2e case files ---
+E2E_FILES_STAGED=()
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        tests/e2e/cases/*/TC-E-*.md) E2E_FILES_STAGED+=("$f") ;;
+    esac
+done
+if (( ${#E2E_FILES_STAGED[@]} > 0 )); then
+    run "validate-e2e-case (${#E2E_FILES_STAGED[@]} staged)" scripts/validate-e2e-case.py "${E2E_FILES_STAGED[@]}"
+fi
+
+# --- Domain file auto-regen (must come AFTER validate-domain so we don't regen invalid files) ---
+if (( ${#DOMAIN_FILES_STAGED[@]} > 0 )); then
+    echo ""
+    echo "── auto-regenerate domain summaries for staged domain files ──"
+    for f in "${DOMAIN_FILES_STAGED[@]}"; do
+        # Extract module name from path: knowledge/L1-domain/<module>-domain.md
+        base=$(basename "$f" .md)            # <module>-domain
+        module="${base%-domain}"             # <module>
+        if scripts/domain-summary.py "$module"; then
+            git add "knowledge/L1-domain/${module}-domain.summary.md"
+            echo "  ℹ added knowledge/L1-domain/${module}-domain.summary.md to commit"
+        else
+            echo "  ✗ domain summary generation failed for $module"
+            FAIL=1
+        fi
+    done
+fi
+
+# --- Warn on freshness drift if any architecture/ file is staged ---
+ARCH_TOUCHED=0
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        architecture/*) ARCH_TOUCHED=1; break ;;
+    esac
+done
+if (( ARCH_TOUCHED == 1 )); then
+    echo ""
+    echo "── feature-map freshness (warn-only) ──"
+    if scripts/feature-map-freshness.sh --check 2>&1 | grep -qE '\?  → |[a-f0-9]{7} +→ +[a-f0-9]{7}'; then
+        # Drift exists in target column
+        scripts/feature-map-freshness.sh --check
+        echo "  ⚠ §2 Maintenance is out of date — run scripts/feature-map-freshness.sh"
+    else
+        echo "  ✓ §2 Maintenance is current"
+    fi
+fi
+
+# --- Warn on convention freshness drift if any L0 file is staged ---
+L0_TOUCHED=0
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        knowledge/L0-global/*) L0_TOUCHED=1; break ;;
+    esac
+done
+if (( L0_TOUCHED == 1 )); then
+    echo ""
+    scripts/verify-conventions.sh
+fi
+
+# --- Validate active-context.md if staged ---
+ACTIVE_CTX_STAGED=0
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        knowledge/L3-session/active-context.md) ACTIVE_CTX_STAGED=1; break ;;
+    esac
+done
+if (( ACTIVE_CTX_STAGED == 1 )) && [[ -x scripts/validate-active-context.py ]]; then
+    run "validate-active-context" scripts/validate-active-context.py
+fi
+
+# --- Role-file convention sync check (warn-only) when role files staged ---
+ROLE_TOUCHED=0
+for f in "${STAGED[@]}"; do
+    case "$f" in
+        .agents/roles/dev.md|.agents/roles/fe-dev.md) ROLE_TOUCHED=1; break ;;
+    esac
+done
+if (( ROLE_TOUCHED == 1 )) && [[ -x scripts/verify-role-files.sh ]]; then
+    echo ""
+    scripts/verify-role-files.sh
+fi
+
+if (( FAIL != 0 )); then
+    echo ""
+    echo "════════════════════════════════════════════════════════════"
+    echo "  pre-commit BLOCKED — fix the errors above and re-stage."
+    echo "  to bypass (not recommended): git commit --no-verify"
+    echo "════════════════════════════════════════════════════════════"
+    exit 1
+fi
+
+exit 0
