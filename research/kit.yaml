@@ -2,7 +2,7 @@
 # Lazy Bot factory chép thư mục template/ vào repo dự án mới và bản này thành .lazy/kit.yaml
 # (quy trình của dự án — sửa bằng PR trong repo dự án).
 name: research
-version: 0.1.0
+version: 0.1.1
 description: Nghiên cứu → báo cáo có nguồn — chốt phạm vi (G1), thu thập nguồn, viết báo cáo có khuyến nghị (G2)
 use_when: >-
   Việc cần tìm hiểu, so sánh, đánh giá hoặc khảo sát (công nghệ, nhà cung cấp, sản phẩm, thị trường, đối thủ,
@@ -14,6 +14,7 @@ stages:
   - id: scope
     goal: Chốt câu hỏi nghiên cứu, phạm vi, tiêu chí đánh giá, nguồn dự kiến — dừng ở G1
     command: /scope {request}
+    model: haiku  # Q-2 2026-10-19: giai đoạn ngắn, có khuôn — model rẻ; chất lượng chốt ở G1 (chủ duyệt). Đo bằng `factory usage`.
     gate:
       script: scripts/lazy-gate.sh scope
       human: G1

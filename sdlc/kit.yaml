@@ -2,8 +2,8 @@
 # Lazy Bot factory chép thư mục template/ vào repo dự án mới và bản này thành .lazy/kit.yaml
 # (quy trình của dự án — sửa bằng PR trong repo dự án).
 name: sdlc
-version: 0.3.2
-description: Quy trình phát triển phần mềm BA → SA → Planner → Build, chủ duyệt từng gate G1–G4
+version: 0.4.0
+description: Quy trình phát triển phần mềm BA → SA → Planner → Build → Review chéo, chủ duyệt từng gate G1–G4
 use_when: >-
   Đầu ra là phần mềm chạy được: app web / mobile, API, backend, công cụ, tính năng mới cho sản phẩm có code.
   Cần phân tích yêu cầu, thiết kế, chia ticket rồi viết code + test. Không dùng khi việc chỉ là nghiên cứu /
@@ -36,10 +36,19 @@ stages:
       timeout_s: 300
       max_retries: 2
   - id: build
-    goal: Làm lần lượt mọi ticket (implement → self-review → self-QC), dừng ở G4
+    goal: Làm lần lượt mọi ticket (implement → self-review → self-QC)
     command: /factory-build {request}
     gate:
       script: scripts/lazy-gate.sh build
-      human: G4
       timeout_s: 1200
+      max_retries: 2
+  # Q-5 2026-10-19: review là GIAI ĐOẠN RIÊNG với phiên mới (mắt mới, không bênh code mình viết)
+  # — pack sdlc 0.2.0 từng có review; dạng tự-review trong build đã lọt lỗi T-1 (poc-metrics #4).
+  - id: review
+    goal: Review chéo mọi ticket vừa build theo checklist (retry/idempotent, đường lỗi, đối chiếu contract), sửa phát hiện — dừng ở G4
+    command: "/review mọi ticket của đợt build này — đối chiếu contract trong architecture/, sửa luôn phát hiện mức cao. Yêu cầu gốc: {request}"
+    gate:
+      script: scripts/lazy-gate.sh build
+      human: G4
+      timeout_s: 900
       max_retries: 2

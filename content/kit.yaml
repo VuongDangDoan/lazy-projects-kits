@@ -2,7 +2,7 @@
 # Lazy Bot factory chép thư mục template/ vào repo dự án mới và bản này thành .lazy/kit.yaml
 # (quy trình của dự án — sửa bằng PR trong repo dự án).
 name: content
-version: 0.1.0
+version: 0.1.1
 description: Viết nội dung — chốt brief (G1), viết bản nháp theo dàn ý, tự biên tập ra bản cuối (G2)
 use_when: >-
   Đầu ra là chữ để người đọc: bài blog, bài giới thiệu sản phẩm, tài liệu hướng dẫn, kịch bản, email,
@@ -14,6 +14,7 @@ stages:
   - id: brief
     goal: Chốt độc giả, mục tiêu, giọng văn, thông điệp chính, dàn ý, độ dài — dừng ở G1
     command: /brief {request}
+    model: haiku  # Q-2 2026-10-19: brief ngắn, có khuôn; chủ duyệt ở gate — đo bằng `factory usage`.
     gate:
       script: scripts/lazy-gate.sh brief
       human: G1
